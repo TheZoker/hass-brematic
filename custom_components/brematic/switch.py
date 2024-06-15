@@ -22,11 +22,12 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import async_generate_entity_id
 from homeassistant.helpers.restore_state import RestoreEntity
 
+from pyBrematic.devices.intertechno import calc_system_and_unit_code
+
 from .const import (
     VERSION,
-    CONF_SYSTEM_CODE,
     CONF_GATEWAY_TYPE,
-    CONF_UNIT_CODE,
+    CONF_CODE,
     CONF_UNIT_TYPE,
     GATEWAY_TYPE_BRENNENSTUHL,
     GATEWAY_TYPE_INTERTECHNO,
@@ -52,7 +53,7 @@ _LOGGER = logging.getLogger(__name__)
 # Validation of the user's configuration
 UNIT_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_UNIT_CODE): cv.string,
+        vol.Required(CONF_CODE): cv.string,
         vol.Optional(CONF_UNIT_TYPE, default=DEFAULT_UNIT_TYPE): vol.In(UNIT_TYPES),
         vol.Optional(CONF_FRIENDLY_NAME): cv.string,
         vol.Optional(CONF_VALUE_TEMPLATE): cv.template,
@@ -65,7 +66,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_GATEWAY_TYPE, default=DEFAULT_GATEWAY_TYPE): vol.In(
             GATEWAY_TYPES
         ),
-        vol.Required(CONF_SYSTEM_CODE): cv.string,
         vol.Required(CONF_SWITCHES): vol.Schema({cv.slug: UNIT_SCHEMA}),
     }
 )
@@ -86,10 +86,11 @@ def get_gateway(gateway_type, host):
 
         return ConnAirGateway(host)
 
-def get_unit(system_code, unit_conf):
+def get_unit(unit_conf):
     """Prepares the device"""
     unit_type = unit_conf.get(CONF_UNIT_TYPE)
-    unit_code = unit_conf.get(CONF_UNIT_CODE)
+    code = unit_conf.get(CONF_CODE)
+    system_code, unit_code = calc_system_and_unit_code(code)
 
     if unit_type == UNIT_TYPE_RCS1000N:
         from pyBrematic.devices.brennenstuhl import RCS1000N
@@ -133,7 +134,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     """Setup the Brematic platform."""
 
     host = config.get(CONF_HOST)
-    system_code = config.get(CONF_SYSTEM_CODE)
     gateway_type = config.get(CONF_GATEWAY_TYPE)
 
     gateway = get_gateway(gateway_type, host)
@@ -143,7 +143,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     switches = []
 
     for object_id, device_config in devices.items():
-        unit = get_unit(system_code, device_config)
+        unit = get_unit(device_config)
         friendly_name = device_config.get(CONF_FRIENDLY_NAME, object_id)
         state_template = device_config.get(CONF_VALUE_TEMPLATE)
 

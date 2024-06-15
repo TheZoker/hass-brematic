@@ -4,6 +4,7 @@ VERSION = "0.7.0"
 
 CONF_SYSTEM_CODE = "system_code"
 CONF_GATEWAY_TYPE = "gateway_type"
+CONF_CODE = "code"
 CONF_UNIT_CODE = "unit_code"
 CONF_UNIT_TYPE = "unit_type"
 
